@@ -1,27 +1,31 @@
 import json
 import pandas as pd
+import logging
+from utils import SILVER_DIR, BRONZE_DIR
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 def load_raw_json(symbol: str):
-    project_root = Path(__file__).resolve().parent.parent
-    raw_path = project_root / "data" / "raw"
+    files = sorted(BRONZE_DIR.glob(f"{symbol}_*.json"))
     
-    files = sorted(raw_path.glob(f"{symbol}_*.json"))
+    if not files:
+        raise FileNotFoundError(f"No raw JSON found for {symbol}")
+    
     latest_file = files[-1]
     
     with open(latest_file) as f:
         data = json.load(f)
         
+    logger.info(f"Loaded raw data from {latest_file}")
     return data
 
-def json_to_dataframe(data: dict):
+def json_to_dataframe(data: dict) -> pd.DataFrame:
     time_series = data["Time Series (Daily)"]
     
     df = pd.DataFrame.from_dict(time_series, orient="index")
     
     df.reset_index(inplace=True)
-    
     df.rename(columns={"index": "date"}, inplace=True)
     
     df.columns = ["date", "open", "high", "low", "close", "volume"]
@@ -42,24 +46,17 @@ def json_to_dataframe(data: dict):
     
     df["rolling_avg_7"] = df["close"].rolling(window=7).mean()
     df["volatility_7"] = df["close"].rolling(window=7).std()
-      
+    
+    logger.info(f"Transformed data into DataFrame with {len(df)} rows")
     return df
 
-def save_processed_data(symbol: str, df: pd.DataFrame):
-    project_root = Path(__file__).resolve().parent.parent
-    processed_path = project_root / "data" / "processed"
-    processed_path.mkdir(parents=True, exist_ok=True)
-    
-    filename = processed_path / f"{symbol}_processed.csv"
-    
-    df.to_csv(filename, index=False)
-    
-    print(f"Saved processed data to {filename}")
 
-if __name__ == "__main__":
-    symbol = "AAPL"
+def transform_symbol(symbol: str) -> Path:
+    logger.info(f"Starting transform for {symbol}")
     
     raw_data = load_raw_json(symbol)
     df = json_to_dataframe(raw_data)
     
-    save_processed_data(symbol,df)
+    df = df.where(pd.notnull(df), None)
+    
+    return df
