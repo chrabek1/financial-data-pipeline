@@ -48,9 +48,9 @@ def fetch_stock_data(symbol: str) -> dict:
         raise ValueError(f"No time series returned for symbol {symbol}")
     return data
 
-def save_raw_data(symbol: str, data:dict):
-    today = datetime.now().strftime("%Y-%m-%d")
-    filename = BRONZE_DIR / f"{symbol}_{today}.json"
+def save_raw_data(symbol: str, data:dict, batch_id: str):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = BRONZE_DIR / f"{symbol}_{timestamp}_{batch_id}.json"
     
     with open(filename, "w") as f:
         json.dump(data, f, indent=4)
@@ -58,7 +58,7 @@ def save_raw_data(symbol: str, data:dict):
     logger.info(f"Saved raw file to %s", filename)
     return filename
     
-def extract_symbol(symbol: str) -> Path:
+def extract_symbol(symbol: str, batch_id: str) -> Path:
     stock_data = fetch_stock_data(symbol)
-    path = save_raw_data(symbol, stock_data)
+    path = save_raw_data(symbol, stock_data, batch_id)
     return path

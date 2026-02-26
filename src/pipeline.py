@@ -1,9 +1,13 @@
 import logging
 import sys
+import uuid
 from extract import extract_symbol
 from transform import transform_symbol
 from load import load_symbol
+from utils import get_connection
+from audit import *
 
+logger = logging.getLogger(__name__)
 
 def configure_logging():
     logging.basicConfig(
@@ -11,28 +15,72 @@ def configure_logging():
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
     )
     
+def process_symbol(conn, batch_id: str, symbol: str) -> None:
+        logger.info(
+            "Processing symbol %s (batch_id=%s)",
+            symbol,
+            batch_id
+        )
+        try:
+            with conn.cursor() as cur:
+                create_symbol_record(cur, batch_id, symbol)
+            conn.commit()
+            
+            extract_symbol(symbol, batch_id)
+            df = transform_symbol(symbol)
+            
+            with conn.cursor() as cur:                
+                rows_loaded = load_symbol(cur, symbol, df, batch_id)
+                mark_symbol_success(cur, batch_id, symbol, rows_loaded)
+            conn.commit()
+            
+            logger.info("Symbol %s SUCCESS", symbol)
+                                    
+        except Exception as e:
+            conn.rollback()
+            
+            with conn.cursor() as cur:
+                mark_symbol_failed(cur, batch_id, symbol, str(e))
+            conn.commit()
+            
+            logger.error(
+                "Symbol %s failed in batch %s: %s",
+                symbol,
+                batch_id,
+                str(e)
+            )
+
+def run_pipeline(symbols: list[str]) -> None:
     
-def run_pipeline(symbol: str) -> None:
-    logger = logging.getLogger(__name__)
-    logger.info(f"Starting pipeline for %s", symbol)
+    batch_id = str(uuid.uuid4())
+    total_symbols = len(symbols)
     
-    try:
-        extract_symbol(symbol)
-        df = transform_symbol(symbol)
-        load_symbol(symbol, df)
+    logger.info(
+        "Starting batch %s with %d symbols",
+        batch_id,
+        total_symbols
+    )
+    
+    conn = get_connection()
+    
+    with conn.cursor() as cur:
+        create_batch(cur, batch_id, total_symbols)
+    conn.commit()
+
+    
+    for symbol in symbols:
+        logger.info("Starting pipeline for %s", symbol)
+        process_symbol(conn,batch_id,symbol)
         
-        logger.info("Pipeline completed successfully for %s", symbol)
+    with conn.cursor() as cur:
+        mark_batch_status(cur, batch_id)
+    conn.commit()
         
-    except Exception as e:
-        logger.error("Pipeline failed for %s: %s", symbol, e)
-        raise
+    conn.close()
+    
+    logger.info("Batch %s finalized", batch_id)
     
 if __name__ == "__main__":
     configure_logging()
     
-    if len(sys.argv) < 2:
-        print("Usage: python pipeline.py SYMBOL")
-        sys.exit(1)
-        
-    for symbol in sys.argv[1:]:
-        run_pipeline(symbol)
+    run_pipeline(symbols)

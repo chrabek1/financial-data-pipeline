@@ -1,14 +1,22 @@
-CREATE TABLE IF NOT EXISTS dim_stock (
+DROP TABLE IF EXISTS fact_stock_daily CASCADE;
+DROP TABLE IF EXISTS staging_stock_daily CASCADE;
+DROP TABLE IF EXISTS dim_stock CASCADE;
+DROP TABLE IF EXISTS dim_date CASCADE;
+
+CREATE TABLE dim_stock (
     stock_id SERIAL PRIMARY KEY,
     symbol TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS dim_date (
+CREATE TABLE dim_date (
     date_id SERIAL PRIMARY KEY,
-    date DATE UNIQUE NOT NULL
+    full_date DATE UNIQUE NOT NULL,
+    year INT NOT NULL,
+    month INT NOT NULL,
+    day INT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS staging_stock_daily (
+CREATE TABLE staging_stock_daily (
     symbol TEXT,
     date DATE,
     open NUMERIC,
@@ -22,7 +30,7 @@ CREATE TABLE IF NOT EXISTS staging_stock_daily (
     batch_id TEXT
 );
 
-CREATE TABLE IF NOT EXISTS fact_stock_daily (
+CREATE TABLE fact_stock_daily (
     stock_id INT REFERENCES dim_stock(stock_id),
     date_id INT REFERENCES dim_date(date_id),
     open NUMERIC,
