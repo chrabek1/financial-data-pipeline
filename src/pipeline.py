@@ -1,11 +1,13 @@
 import logging
 import sys
 import uuid
-from extract import extract_symbol
+import time
+from extract import extract_symbol, ExtractTransientError
 from transform import transform_symbol
 from load import load_symbol
-from utils import get_connection
+from utils import get_connection, MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY
 from audit import *
+from retry import retry
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,13 @@ def process_symbol(conn, batch_id: str, symbol: str) -> None:
                 create_symbol_record(cur, batch_id, symbol)
             conn.commit()
             
-            extract_symbol(symbol, batch_id)
+            retry(
+                lambda: extract_symbol(symbol, batch_id),
+                max_retries=MAX_RETRIES,
+                base_delay=BASE_DELAY,
+                exceptions=(ExtractTransientError,)
+            )
+            
             df = transform_symbol(symbol)
             
             with conn.cursor() as cur:                
@@ -35,7 +43,7 @@ def process_symbol(conn, batch_id: str, symbol: str) -> None:
             conn.commit()
             
             logger.info("Symbol %s SUCCESS", symbol)
-                                    
+
         except Exception as e:
             conn.rollback()
             
@@ -71,6 +79,7 @@ def run_pipeline(symbols: list[str]) -> None:
     for symbol in symbols:
         logger.info("Starting pipeline for %s", symbol)
         process_symbol(conn,batch_id,symbol)
+        time.sleep(MIN_SYMBOL_DELAY)
         
     with conn.cursor() as cur:
         mark_batch_status(cur, batch_id)
@@ -80,7 +89,3 @@ def run_pipeline(symbols: list[str]) -> None:
     
     logger.info("Batch %s finalized", batch_id)
     
-if __name__ == "__main__":
-    configure_logging()
-    
-    run_pipeline(symbols)

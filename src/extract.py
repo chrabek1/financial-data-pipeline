@@ -15,6 +15,9 @@ BASE_URL = "https://www.alphavantage.co/query"
 
 logger = logging.getLogger(__name__)
 
+class ExtractTransientError(Exception):
+    pass
+
 def fetch_stock_data(symbol: str) -> dict:
     if not API_KEY:
         raise ValueError("API key not found. Check your .env file.")
@@ -27,8 +30,11 @@ def fetch_stock_data(symbol: str) -> dict:
     }
     
     logger.info(f"Fetching data for {symbol}...")
-    
-    response = requests.get(BASE_URL, params=params, timeout=10)
+    try:
+        response = requests.get(BASE_URL, params=params, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise ExtractTransientError(str(e))
     
     if response.status_code !=200:
         raise Exception(f"HTTP error: {response.status_code}")
@@ -36,16 +42,12 @@ def fetch_stock_data(symbol: str) -> dict:
     data = response.json()
     
     # Check if API returned rate limit message
-    if "Note" in data:
-        logger.warning("Rate limit reached. Waiting 60 seconds...")
-        time.sleep(60)
-        return fetch_stock_data(symbol)
     
     if "Error Message" in data:
         raise Exception(f"API error: {data['Error Message']}")
     
-    if "Time Series (Daily)" not in data:
-        raise ValueError(f"No time series returned for symbol {symbol}")
+    if "Information" in data:
+        raise ExtractTransientError(data["Information"])
     return data
 
 def save_raw_data(symbol: str, data:dict, batch_id: str):
