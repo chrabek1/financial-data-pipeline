@@ -1,0 +1,2 @@
+class ExtractTransientError(Exception):
+    pass

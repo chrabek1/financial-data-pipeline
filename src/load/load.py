@@ -3,7 +3,7 @@ import psycopg2
 import logging
 from datetime import timedelta
 from io import StringIO
-from utils import get_connection
+from utils.utils import get_connection
 
 
 

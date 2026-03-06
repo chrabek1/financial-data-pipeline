@@ -1,4 +1,4 @@
-from utils import get_connection
+from utils.utils import get_connection
 def create_batch(cur, batch_id, total_symbols):
     cur.execute(
         """

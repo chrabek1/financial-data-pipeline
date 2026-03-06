@@ -1,12 +1,14 @@
 import logging
-import sys
+import os
 import uuid
 import time
-from extract import extract_symbol, ExtractTransientError
-from transform import transform_symbol
-from load import load_symbol
-from utils import get_connection, MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY
-from audit import *
+from extract.extract import extract_symbol
+from exceptions import ExtractTransientError
+from transform.transform import transform_symbol
+from features.features import add_features
+from load.load import load_symbol
+from utils.utils import get_connection, MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY
+from audit.audit import *
 from retry import retry
 
 logger = logging.getLogger(__name__)
@@ -23,19 +25,24 @@ def process_symbol(conn, batch_id: str, symbol: str) -> None:
             symbol,
             batch_id
         )
+        
+        
         try:
             with conn.cursor() as cur:
                 create_symbol_record(cur, batch_id, symbol)
             conn.commit()
             
-            retry(
+            path = retry(
                 lambda: extract_symbol(symbol, batch_id),
                 max_retries=MAX_RETRIES,
                 base_delay=BASE_DELAY,
                 exceptions=(ExtractTransientError,)
             )
+            logger.info("Extract completed for %s → %s", symbol, path)
             
-            df = transform_symbol(symbol)
+            df = transform_symbol(path)
+            
+            df = add_features(df)
             
             with conn.cursor() as cur:                
                 rows_loaded = load_symbol(cur, symbol, df, batch_id)
