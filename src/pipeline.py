@@ -7,9 +7,10 @@ from exceptions import ExtractTransientError
 from transform.transform import transform_symbol
 from features.features import add_features
 from load.load import load_symbol
-from utils.utils import get_connection, MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY
+from utils.utils import get_connection, MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY, SILVER_DIR
 from audit.audit import *
 from retry import retry
+from quality.checks import validate_prices
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,13 @@ def process_symbol(conn, batch_id: str, symbol: str) -> None:
             logger.info("Extract completed for %s → %s", symbol, path)
             
             df = transform_symbol(path)
+            
+            validate_prices(df)
+            
+            silver_path = SILVER_DIR / batch_id
+            silver_path.mkdir(parents=True, exist_ok=True)
+            
+            df.to_parquet(silver_path / f"{symbol}.parquet", engine="pyarrow", index=False)
             
             df = add_features(df)
             

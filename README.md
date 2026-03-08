@@ -31,19 +31,61 @@ This project is designed as a learning path toward becoming a Data Engineer.
 # 🏗 Architecture Overview
 
 
-API (Alpha Vantage)
-↓
-Bronze (raw JSON files)
-↓
-Transform (pandas DataFrame)
-↓
-Staging table (Postgres)
-↓
-Dimension tables (dim_stock, dim_date)
-↓
-Fact table (fact_stock_daily)
-↓
-Audit tables (etl_batch, etl_batch_symbol)
+## Architecture
+
+```mermaid
+flowchart TD
+
+    subgraph Sources
+        API[Market Data API\nAlpha Vantage / YFinance]
+    end
+
+    subgraph Ingestion
+        EXTRACT[Extract Layer\nfetch_daily()]
+    end
+
+    subgraph Data Lake
+        BRONZE[Bronze Layer\nRaw JSON\nbatch_id partition]
+        SILVER[Silver Layer\nCleaned Parquet\ncanonical schema]
+    end
+
+    subgraph Processing
+        TRANSFORM[Transform Layer\nTransformFactory\nsource-specific parsing]
+        FEATURES[Feature Engineering\nrolling_avg_7\nvolatility_7\ndaily_return]
+        QUALITY[Data Quality Checks\nnulls\nranges\nduplicates]
+    end
+
+    subgraph Warehouse
+        POSTGRES[(PostgreSQL)]
+        DIM_STOCK[dim_stock]
+        DIM_DATE[dim_date]
+        FACT[fact_stock_daily]
+    end
+
+    subgraph Orchestration
+        PIPELINE[pipeline.py\nbatch orchestration]
+        AUDIT[audit tables\netl_batch\netl_batch_symbol]
+    end
+
+    API --> EXTRACT
+    EXTRACT --> BRONZE
+    BRONZE --> TRANSFORM
+    TRANSFORM --> SILVER
+    SILVER --> QUALITY
+    QUALITY --> FEATURES
+    FEATURES --> POSTGRES
+
+    POSTGRES --> DIM_STOCK
+    POSTGRES --> DIM_DATE
+    POSTGRES --> FACT
+
+    PIPELINE --> EXTRACT
+    PIPELINE --> TRANSFORM
+    PIPELINE --> FEATURES
+    PIPELINE --> POSTGRES
+    PIPELINE --> AUDIT
+```
+
 
 
 ---
