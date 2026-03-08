@@ -37,22 +37,22 @@ This project is designed as a learning path toward becoming a Data Engineer.
 flowchart TD
 
     subgraph Sources
-        API[Market Data API\nAlpha Vantage / YFinance]
+        API[Market Data API - Alpha Vantage / YFinance]
     end
 
     subgraph Ingestion
-        EXTRACT[Extract Layer\nfetch_daily()]
+        EXTRACT[Extract Layer - fetch_daily]
     end
 
-    subgraph Data Lake
-        BRONZE[Bronze Layer\nRaw JSON\nbatch_id partition]
-        SILVER[Silver Layer\nCleaned Parquet\ncanonical schema]
+    subgraph Data_Lake
+        BRONZE[Bronze Layer - Raw JSON - batch_id partition]
+        SILVER[Silver Layer - Cleaned Parquet - canonical schema]
     end
 
     subgraph Processing
-        TRANSFORM[Transform Layer\nTransformFactory\nsource-specific parsing]
-        FEATURES[Feature Engineering\nrolling_avg_7\nvolatility_7\ndaily_return]
-        QUALITY[Data Quality Checks\nnulls\nranges\nduplicates]
+        TRANSFORM[Transform Layer - TransformFactory - source parsing]
+        FEATURES[Feature Engineering - rolling_avg_7 volatility_7 daily_return]
+        QUALITY[Data Quality Checks - nulls ranges duplicates]
     end
 
     subgraph Warehouse
@@ -63,8 +63,8 @@ flowchart TD
     end
 
     subgraph Orchestration
-        PIPELINE[pipeline.py\nbatch orchestration]
-        AUDIT[audit tables\netl_batch\netl_batch_symbol]
+        PIPELINE[pipeline.py - batch orchestration]
+        AUDIT[audit tables - etl_batch etl_batch_symbol]
     end
 
     API --> EXTRACT
