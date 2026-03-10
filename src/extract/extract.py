@@ -3,8 +3,8 @@ import logging
 import os 
 from pathlib import Path
 from datetime import datetime
-
-from utils.utils import BRONZE_DIR
+from config.settings import DATA_SOURCE
+from utils.paths import BRONZE_DIR
 from data_sources.factory import get_data_source
 from exceptions import ExtractTransientError
 
@@ -15,7 +15,7 @@ data_source = get_data_source()
 
 def extract_symbol(symbol: str, batch_id:str) -> Path:
     
-    logger.info("Fetching data for %s...", symbol)
+    logger.info("Fetching data for %s using %s", symbol, DATA_SOURCE)
     
     payload = data_source.fetch_daily(symbol)
     
@@ -29,7 +29,7 @@ def extract_symbol(symbol: str, batch_id:str) -> Path:
     bronze_record = {
         "symbol": symbol,
         "batch_id": batch_id,
-        "source": os.getenv("DATA_SOURCE"),
+        "source": DATA_SOURCE,
         "fetched_at": timestamp,
         "payload": payload
     }

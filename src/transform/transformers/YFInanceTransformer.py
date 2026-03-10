@@ -1,20 +1,18 @@
-import pandas
+import pandas as pd
 from .base import BaseTransformer
 
 class YFinanceTransformer(BaseTransformer):
     
     def transform(self, payload, symbol):
         
-        df = payload.copy()
-        
+        df = pd.DataFrame(payload)
+
         df["symbol"] = symbol
-        
-        df.rename(colums={
-            "Date": "date",
-            "Open": "open",
-            "High": "high",
-            "Low": "low",
-            "Close": "close",
-            "Volume": "volume"
-        }, inplace=True)
+
+        df["date"] = pd.to_datetime(df["date"])
+
+        df = df[
+            ["symbol", "date", "open", "high", "low", "close", "volume"]
+        ]
+
         return df

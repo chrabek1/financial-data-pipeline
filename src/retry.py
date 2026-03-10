@@ -1,5 +1,8 @@
 import time
 import logging
+import random
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,5 +29,13 @@ def retry(
                 logger.error("Max retries reached. Raising exception.")
                 raise
             
-            time.sleep(delay)
+            sleep_time = delay + random.uniform(0, 0.5)
+
+            logger.info(
+                "Sleeping %.2f seconds before retry",
+                sleep_time
+            )
+
+            time.sleep(sleep_time)
+
             delay *= 2

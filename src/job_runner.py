@@ -1,6 +1,6 @@
 import logging
 import sys
-from pipeline import run_pipeline
+from pipeline.pipeline import run_pipeline
 
 
 def configure_logging():
