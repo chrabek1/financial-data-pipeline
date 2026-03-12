@@ -15,12 +15,14 @@ MAX_RETRIES = int(os.getenv("MAX_RETRIES", 3))
 BASE_DELAY = float(os.getenv("BASE_DELAY", 1.0))
 MIN_SYMBOL_DELAY = float(os.getenv("MIN_SYMBOL_DELAY", 1.2))
 
-# DATABASE
+# CONNECTION CONFIGURATION
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "postgres"),
-    "port": int(os.getenv("DB_PORT", 5432)),
-    "dbname": os.getenv("DB_NAME", "finance"),
-    "user": os.getenv("DB_USER", "finance_user"),
-    "password": os.getenv("DB_PASSWORD", "finance_password"),
-}
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
+DB_HOST = os.getenv("DB_HOST", "postgres")
+DB_PORT = int(os.getenv("DB_PORT", 5432))
+
+DB_POOL_MIN=int(os.getenv("DB_POOL_MIN", 1))
+DB_POOL_MAX=int(os.getenv("DB_POOL_MAX", 10))

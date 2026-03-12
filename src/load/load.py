@@ -97,6 +97,7 @@ def load_symbol(cur, symbol: str, df: pd.DataFrame, batch_id: str) -> int:
             ON st.symbol = ds.symbol
         WHERE st.batch_id = %s
         AND ds.symbol IS NULL
+        ON CONFLICT (symbol) DO NOTHING
         """,
         (batch_id,)
     )
@@ -113,6 +114,7 @@ def load_symbol(cur, symbol: str, df: pd.DataFrame, batch_id: str) -> int:
             ON st.date = dd.full_date
         WHERE st.batch_id = %s
         AND dd.full_date IS NULL
+        ON CONFLICT (full_date) DO NOTHING
         """,
         (batch_id,)
     )

@@ -1,21 +1,13 @@
 import logging
-import os
 import uuid
-import time
-from extract.extract import extract_symbol
-from exceptions import ExtractTransientError
-from transform.transform import transform_symbol
 from features.features import add_features
-from load.load import load_symbol
-from utils.db import get_connection
-from utils.paths import SILVER_DIR
+from utils.db import get_connection, release_connection
 from audit.audit import *
-from retry import retry
-from quality.checks import validate_prices
-from config.settings import MAX_RETRIES, BASE_DELAY, MIN_SYMBOL_DELAY
-from quality.schema import validate_schema
-from pipeline.tasks import run_task
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pipeline.tasks.extract_task import extract_task
+from pipeline.tasks.transform_task import transform_task
+from pipeline.tasks.silver_task import save_silver_task
+from pipeline.tasks.load_task import load_task
 import psycopg2
 
 logger = logging.getLogger(__name__)
@@ -41,49 +33,30 @@ def process_symbol(batch_id: str, symbol: str) -> None:
         conn.commit()
     
         # EXTRACT
-        path = retry(
-            lambda: run_task("extract", extract_symbol, symbol, batch_id),
-            max_retries=MAX_RETRIES,
-            base_delay=BASE_DELAY,
-            exceptions=(ExtractTransientError,)
-        )
+        path = extract_task(symbol,batch_id)
         
         logger.info("Extract completed for %s -> %s", symbol, path)
         
         # TRANSFORM
-        df = transform_symbol(path)
-        
-        # VALIDATION
-        validate_schema(df)
-        validate_prices(df)
+        df = transform_task(path)
         
         # SAVE SILVER
-        silver_dir = SILVER_DIR / symbol
-        silver_dir.mkdir(parents=True, exist_ok=True)
-        
-        silver_file = silver_dir / f"{symbol}.parquet"
-        
-        df.to_parquet(silver_file, engine="pyarrow", index=False)
-        
-        logger.info("Saved silver dataset to %s", silver_file)
+        save_silver_task(df, symbol)
         
         # FEATURES
         df = add_features(df)
         
         # LOAD
         with conn.cursor() as cur:
-            rows_loaded = retry(
-                lambda: run_task("load", load_symbol, cur, symbol, df, batch_id),
-                max_retries=MAX_RETRIES,
-                base_delay=BASE_DELAY,
-                exceptions=(psycopg2.OperationalError,)
-            )
+            
+            rows_loaded = load_task(cur, symbol, df, batch_id)
             
             mark_symbol_success(cur, batch_id, symbol, rows_loaded)
         
         conn.commit()
         
         logger.info("Symbol %s SUCCESS", symbol)
+
     
     except Exception as e:
         
@@ -97,7 +70,7 @@ def process_symbol(batch_id: str, symbol: str) -> None:
         
     finally:
     
-        conn.close()
+        release_connection(conn)
     
     
 
