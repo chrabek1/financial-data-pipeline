@@ -1,13 +1,12 @@
 from transform.transform import transform_symbol
-from quality.schema import validate_schema
-from quality.checks import validate_prices
-
+from models.stock_daily import StockDailyModel
 
 def transform_task(path):
     df = transform_symbol(path)
     
-    validate_schema(df)
-    validate_prices(df)
+    df = StockDailyModel.enforce_types(df)
+    StockDailyModel.validate_base(df)
+    StockDailyModel.validate_business_rules(df)
 
     
     return df

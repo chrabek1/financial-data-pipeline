@@ -49,8 +49,8 @@ def process_symbol(batch_id: str, symbol: str) -> None:
         
         
         # MODEL VALIDATION
-        df = StockDailyModel.enforce(df)
-        StockDailyModel.validate(df)
+        df = StockDailyModel.enforce_types(df)
+        StockDailyModel.validate_full(df)
         
         # LOAD
         with conn.cursor() as cur:
