@@ -8,6 +8,7 @@ from pipeline.tasks.extract_task import extract_task
 from pipeline.tasks.transform_task import transform_task
 from pipeline.tasks.silver_task import save_silver_task
 from pipeline.tasks.load_task import load_task
+from models.stock_daily import StockDailyModel
 import psycopg2
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,11 @@ def process_symbol(batch_id: str, symbol: str) -> None:
         
         # FEATURES
         df = add_features(df)
+        
+        
+        # MODEL VALIDATION
+        df = StockDailyModel.enforce(df)
+        StockDailyModel.validate(df)
         
         # LOAD
         with conn.cursor() as cur:
