@@ -6,7 +6,7 @@ class StockDailyModel:
     To jest jedyne źródło prawdy o danych.
     """
     
-    BASE_COLUMNS = {
+    BASE_COLUMNS = [
         "symbol",
         "date",
         "open",
@@ -14,15 +14,15 @@ class StockDailyModel:
         "low",
         "close",
         "volume",
-    }
+    ]
     
-    FULL_COLUMNS =  BASE_COLUMNS | {
+    FULL_COLUMNS =  BASE_COLUMNS + [
         "daily_return",
         "rolling_avg_7",
         "volatility_7",
-    }
+    ]
     
-    NOT_NULL_COLUMNS = {
+    NOT_NULL_COLUMNS = [
         "symbol",
         "date",
         "open",
@@ -30,7 +30,7 @@ class StockDailyModel:
         "low",
         "close",
         "volume",
-    }
+    ]
     
     DTYPES = {
         "symbol": "object",
@@ -56,14 +56,14 @@ class StockDailyModel:
                     )
     
     @classmethod
-    def _validate_no_unexpected_columns(cls, df: pd.DataFrame, allowed: set) -> None:
-        unexpected = set(df.columns) - allowed
+    def _validate_no_unexpected_columns(cls, df: pd.DataFrame, allowed: list) -> None:
+        unexpected = set(df.columns) - set(allowed)
         if unexpected:
             raise ValueError(f"Unexpected columns present: {unexpected}")
     
     @classmethod
     def validate_base(cls, df: pd.DataFrame) -> None:
-        missing = cls.BASE_COLUMNS - set(df.columns)
+        missing = set(cls.BASE_COLUMNS) - set(df.columns)
         if missing:
             raise ValueError(f"Missing columns: {missing}")
         
@@ -78,7 +78,7 @@ class StockDailyModel:
 
     @classmethod
     def validate_full(cls, df: pd.DataFrame) -> None:
-        missing = cls.FULL_COLUMNS - set(df.columns)
+        missing = set(cls.FULL_COLUMNS) - set(df.columns)
         if missing:
             raise ValueError(f"Missing columns: {missing}")
         

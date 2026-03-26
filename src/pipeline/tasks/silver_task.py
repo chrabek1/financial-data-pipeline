@@ -1,6 +1,9 @@
 from utils.paths import SILVER_DIR
+from pipeline.context import SymbolContext
 
-def save_silver_task(df, symbol):
+def save_silver_task(df, context: SymbolContext):
+    
+    symbol=context.symbol
     
     silver_dir = SILVER_DIR / symbol
     silver_dir.mkdir(parents=True, exist_ok=True)

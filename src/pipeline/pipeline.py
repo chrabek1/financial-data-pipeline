@@ -8,8 +8,9 @@ from pipeline.tasks.extract_task import extract_task
 from pipeline.tasks.transform_task import transform_task
 from pipeline.tasks.silver_task import save_silver_task
 from pipeline.tasks.load_task import load_task
-from models.stock_daily import StockDailyModel
-import psycopg2
+from pipeline.tasks.run_task import run_task
+from pipeline.tasks.validate_task import validate_task
+from pipeline.context import SymbolContext
 
 logger = logging.getLogger(__name__)
 
@@ -19,45 +20,42 @@ def configure_logging():
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
     )
     
-
-
-def process_symbol(batch_id: str, symbol: str) -> None:
+def process_symbol(context: SymbolContext) -> None:
     
     conn = get_connection()
+    
+    symbol = context.symbol
+    batch_id = context.batch_id
     
     logger.info("Processing symbol %s (batch_id=%s)", symbol, batch_id)
     
     try:
         
         with conn.cursor() as cur:
-            create_symbol_record(cur, batch_id, symbol)
+            create_symbol_record(cur, context)
         conn.commit()
     
         # EXTRACT
-        path = extract_task(symbol,batch_id)
-        
-        logger.info("Extract completed for %s -> %s", symbol, path)
+        path = run_task("extract", extract_task, context)  
         
         # TRANSFORM
-        df = transform_task(path)
+        df = run_task("transform", transform_task,context, path)
         
         # SAVE SILVER
-        save_silver_task(df, symbol)
+        run_task("silver", save_silver_task, context, df)
         
         # FEATURES
-        df = add_features(df)
-        
+        df = run_task("features", add_features, df)
         
         # MODEL VALIDATION
-        df = StockDailyModel.enforce_types(df)
-        StockDailyModel.validate_full(df)
-        
+        df = run_task("validate", validate_task, df)
+                
         # LOAD
         with conn.cursor() as cur:
             
-            rows_loaded = load_task(cur, symbol, df, batch_id)
+            rows_loaded = run_task("load", load_task, cur, context, df)
             
-            mark_symbol_success(cur, batch_id, symbol, rows_loaded)
+            mark_symbol_success(cur, context, rows_loaded)
         
         conn.commit()
         
@@ -69,7 +67,7 @@ def process_symbol(batch_id: str, symbol: str) -> None:
         conn.rollback()
         
         with conn.cursor() as cur:
-            mark_symbol_failed(cur, batch_id, symbol, str(e))
+            mark_symbol_failed(cur, context, str(e))
         conn.commit()
         
         logger.error("Symbol %s failed in batch %s: %s", symbol, batch_id, str(e))
@@ -110,7 +108,7 @@ def run_pipeline(symbols: list[str]) -> None:
         for symbol in symbols:
             logger.info("Submitting symbol %s to executor", symbol)
             futures.append(
-                executor.submit(process_symbol, batch_id, symbol)
+                executor.submit(process_symbol, SymbolContext(symbol, batch_id))
             )
         for future in as_completed(futures):
             future.result()
@@ -121,7 +119,7 @@ def run_pipeline(symbols: list[str]) -> None:
     
     with conn.cursor() as cur:
         mark_batch_status(cur, batch_id)
-    conn.commit()
+    conn.commit()   
         
     conn.close()
     

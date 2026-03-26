@@ -1,5 +1,6 @@
 from utils.db import get_connection
-def create_batch(cur, batch_id, total_symbols):
+from pipeline.context import SymbolContext
+def create_batch(cur, batch_id, total_symbols): # bez context bo to batch-level
     cur.execute(
         """
         INSERT INTO etl_batch (
@@ -18,7 +19,7 @@ def create_batch(cur, batch_id, total_symbols):
         (batch_id, total_symbols )
     )
     
-def create_symbol_record(cur, batch_id, symbol):
+def create_symbol_record(cur, context: SymbolContext):
     cur.execute(
         """
         INSERT INTO etl_batch_symbol (
@@ -34,30 +35,32 @@ def create_symbol_record(cur, batch_id, symbol):
             'RUNNING'
         )
         """,
-        (batch_id, symbol)
+        (context.batch_id, context.symbol)
     )
     
-def mark_symbol_success(cur, batch_id, symbol, rows_loaded):
+def mark_symbol_success(cur, context, rows_loaded):
+    
     cur.execute(
         """
         UPDATE etl_batch_symbol
         SET finished_at=NOW(), status='SUCCESS', rows_loaded=%s
         WHERE batch_id=%s and symbol=%s
         """,
-        (rows_loaded,batch_id,symbol)
+        (rows_loaded,context.batch_id, context.symbol)
     )
 
-def mark_symbol_failed(cur, batch_id, symbol, error_message):
+def mark_symbol_failed(cur, context: SymbolContext, error_message):
     cur.execute(
         """
         UPDATE etl_batch_symbol
         SET finished_at=NOW(), status='FAILED', error_message=%s
         WHERE batch_id=%s and symbol=%s
         """,
-        (error_message,batch_id,symbol)
+        (error_message, context.batch_id, context.symbol)
     )
     
-def mark_batch_status(cur, batch_id: str) -> None:
+def mark_batch_status(cur, batch_id) -> None: # batch-level
+    
     cur.execute(
         """
         UPDATE etl_batch_symbol

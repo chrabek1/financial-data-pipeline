@@ -27,30 +27,6 @@ def batch_already_loaded(cur, symbol: str, batch_id: str) -> bool:
     return cur.fetchone() is not None
 
 
-def prepare_dateframe(df: pd.DataFrame, symbol: str, batch_id: str) -> pd.DataFrame:
-    df_copy = df.copy()
-    
-    df_copy["batch_id"] = str(batch_id)
-    df_copy["symbol"] = symbol
-    
-    df_copy = df_copy[
-        [
-            "batch_id",
-            "symbol",
-            "date",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "daily_return",
-            "rolling_avg_7",
-            "volatility_7",
-        ]
-    ]
-    
-    return df_copy
-
 
 def load_symbol(cur, symbol: str, df: pd.DataFrame, batch_id: str) -> int:
     logger.info("Starting load for %s (batch_id=%s)", symbol, batch_id)
@@ -73,13 +49,12 @@ def load_symbol(cur, symbol: str, df: pd.DataFrame, batch_id: str) -> int:
         return 0
     
     #PREPARE
-    df_prepared = prepare_dateframe(df_filtered, symbol, batch_id)
     
     #CLEAN OLD DATA
     delete_refresh_window(cur, symbol, refresh_from)
     
     #LOAD PIPELINE
-    insert_staging(cur, df_prepared, batch_id)
+    insert_staging(cur, df_filtered, batch_id)
     load_dimensions(cur, batch_id)
     rows_loaded = load_fact_table(cur, batch_id)
     

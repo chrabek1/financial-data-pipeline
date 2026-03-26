@@ -10,8 +10,17 @@ def copy_to_staging(cur, df: pd.DataFrame):
     cur.copy_expert(
         """
         COPY staging_stock_daily (
-            batch_id, symbol, date, open, high, low, close,
-            volume, daily_return, rolling_avg_7, volatility_7
+        batch_id,
+        symbol,
+        date,
+        open,
+        high,
+        low,
+        close,
+        volume,
+        daily_return,
+        rolling_avg_7,
+        volatility_7
         )
         FROM STDIN WITH CSV
         """,
