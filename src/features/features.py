@@ -1,6 +1,6 @@
 import pandas as pd
 
-def add_features(df: pd.DataFrame) -> pd.DataFrame:
+def add_features(context, df: pd.DataFrame) -> pd.DataFrame:
     
     df["daily_return"] = (
         (df["close"] - df["close"].shift(1)) / df["close"].shift(1)

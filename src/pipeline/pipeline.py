@@ -45,10 +45,10 @@ def process_symbol(context: SymbolContext) -> None:
         run_task("silver", save_silver_task, context, df)
         
         # FEATURES
-        df = run_task("features", add_features, df)
+        df = run_task("features", add_features, context, df)
         
-        # MODEL VALIDATION
-        df = run_task("validate", validate_task, df)
+        # MODEL VALIDATION  
+        df = run_task("validate", validate_task, context, df)
                 
         # LOAD
         with conn.cursor() as cur:
@@ -70,7 +70,11 @@ def process_symbol(context: SymbolContext) -> None:
             mark_symbol_failed(cur, context, str(e))
         conn.commit()
         
-        logger.error("Symbol %s failed in batch %s: %s", symbol, batch_id, str(e))
+        logger.exception(
+            "[symbol=%s][batch=%s] FAILED",
+            symbol,
+            batch_id
+        )
         
     finally:
     
@@ -106,7 +110,7 @@ def run_pipeline(symbols: list[str]) -> None:
         futures = []
         
         for symbol in symbols:
-            logger.info("Submitting symbol %s to executor", symbol)
+            logger.debug("Submitting symbol %s to executor", symbol)
             futures.append(
                 executor.submit(process_symbol, SymbolContext(symbol, batch_id))
             )

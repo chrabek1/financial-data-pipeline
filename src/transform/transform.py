@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def transform_symbol(context: SymbolContext, path: Path):
     
-    logger.info("Starting transform for %s", path)
+    logger.debug("Starting transform for %s", path)
     
     with open(path) as f:
         raw = json.load(f)
@@ -47,6 +47,6 @@ def transform_symbol(context: SymbolContext, path: Path):
     df = transformer.transform(payload, symbol)
     df = df[StockDailyModel.BASE_COLUMNS]
     
-    logger.info("Transformed data into DataFrame with %s rows", len(df))
+    logger.debug("Transformed data into DataFrame with %s rows", len(df))
     
     return df

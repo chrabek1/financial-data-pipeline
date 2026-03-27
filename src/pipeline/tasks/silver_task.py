@@ -1,7 +1,7 @@
 from utils.paths import SILVER_DIR
 from pipeline.context import SymbolContext
 
-def save_silver_task(df, context: SymbolContext):
+def save_silver_task(context: SymbolContext, df):
     
     symbol=context.symbol
     

@@ -15,7 +15,7 @@ data_source = get_data_source()
 
 def extract_symbol(symbol: str, batch_id:str) -> Path:
     
-    logger.info("Fetching data for %s using %s", symbol, DATA_SOURCE)
+    logger.debug("Fetching data for %s using %s", symbol, DATA_SOURCE)
     
     payload = data_source.fetch_daily(symbol)
     
@@ -37,6 +37,6 @@ def extract_symbol(symbol: str, batch_id:str) -> Path:
     with open(file_path,"w") as f:
         json.dump(bronze_record, f, indent=2)
         
-    logger.info("Saved raw file to %s", file_path)
+    logger.debug("Saved raw file to %s", file_path)
     
     return file_path

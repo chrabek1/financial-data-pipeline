@@ -30,15 +30,15 @@ class StockLoader:
     
     
     def _load_staging(self,df: pd.DataFrame) -> None:
-        logger.info("Staging load start (batch_id=%s)", self.batch_id)
+        logger.debug("Staging load start (batch_id=%s)", self.batch_id)
         insert_staging(self.cur, df, self.batch_id)
     
     def _load_dimensions(self) -> None:
-        logger.info("Dimensions load start (batch_id=%s)", self.batch_id)
+        logger.debug("Dimensions load start (batch_id=%s)", self.batch_id)
         load_dimensions(self.cur, self.batch_id)
         
     def _load_fact(self) -> int:
-        logger.info("Fact load start (batch_id=%s)", self.batch_id)
+        logger.debug("Fact load start (batch_id=%s)", self.batch_id)
         return load_fact_table(self.cur, self.batch_id)
     
     def _persist(self, df: pd.DataFrame) -> int:
@@ -66,6 +66,9 @@ class StockLoader:
         return self.cur.fetchone() is not None
     
     def _prepare_for_load(self, df: pd.DataFrame) -> pd.DataFrame:
+        
+        logger.debug("Preparing dataframe for load (%s rows)", len(df))
+        
         df_copy = df.copy()
         
         df_copy["batch_id"] = str(self.batch_id)
@@ -102,6 +105,6 @@ class StockLoader:
         
         rows_loaded = self._persist(df)
         
-        logger.info("Load completed for %s (batch_id=%s)", self.symbol, self.batch_id)
+        logger.info("[symbol=%s] Load completed (%s rows)", self.symbol, rows_loaded)
         
         return rows_loaded
